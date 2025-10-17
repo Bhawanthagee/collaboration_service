@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Private Chat - STOMP WebSocket</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f2f2f2;
+        }
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 250px;
+            overflow-y: scroll;
+            background: white;
+        }
+        #messageInput {
+            width: 70%;
+            padding: 5px;
+        }
+        #sendBtn {
+            padding: 5px 10px;
+        }
+        .msg {
+            margin: 4px 0;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .mine {
+            background: #dcf8c6;
+            text-align: right;
+        }
+        .other {
+            background: #e5e5ea;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+<h2>Private Chat Example</h2>
+
+<label>Your User ID: </label>
+<input type="text" id="userId" placeholder="Enter 1 or 2">
+<button onclick="connect()">Connect</button>
+
+<hr>
+
+<div id="messages"></div>
+
+<hr>
+
+<input type="text" id="receiverId" placeholder="Receiver ID (1 or 2)">
+<input type="text" id="messageInput" placeholder="Type message...">
+<button id="sendBtn" onclick="sendMessage()">Send</button>
+
+<script>
+    let stompClient = null;
+    let currentUserId = null;
+    let connected = false;
+
+    function connect() {
+        currentUserId = document.getElementById("userId").value.trim();
+        if (!currentUserId) {
+            alert("Enter your user ID first!");
+            return;
+        }
+
+        // ✅ Auto-detect environment
+        // If opened via file:// -> connect to localhost:8083/ws
+        // If served from backend -> use relative /ws
+        const baseUrl = (window.location.protocol.startsWith("file"))
+            ? "http://localhost:8083/ws"
+            : "/ws";
+
+        console.log("Connecting to:", baseUrl);
+
+        const socket = new SockJS(baseUrl);
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null; // silence logs
+
+        // Send userId in the CONNECT headers (backend handshake handler reads this)
+        const headers = { userId: currentUserId };
+
+        stompClient.connect(headers, (frame) => {
+            console.log("✅ Connected:", frame);
+            connected = true;
+            alert("Connected as User " + currentUserId);
+
+            // Subscribe to your private queue
+            stompClient.subscribe('/user/' + currentUserId + '/private', (message) => {
+                const msg = JSON.parse(message.body);
+                showMessage(msg, false);
+            });
+        }, (error) => {
+            console.error("❌ Connection error:", error);
+            alert("Failed to connect. Check backend logs or ensure server is running.");
+        });
+    }
+
+    function sendMessage() {
+        if (!connected) {
+            alert("You must connect first!");
+            return;
+        }
+
+        const receiverId = document.getElementById("receiverId").value.trim();
+        const content = document.getElementById("messageInput").value.trim();
+
+        if (!receiverId || !content) {
+            alert("Receiver ID and message are required!");
+            return;
+        }
+
+        const chatMessage = {
+            senderId: currentUserId,
+            receiverId: receiverId,
+            content: content
+        };
+
+        stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
+        showMessage(chatMessage, true);
+        document.getElementById("messageInput").value = "";
+    }
+
+    function showMessage(message, isMine) {
+        const messagesDiv = document.getElementById("messages");
+        const msgDiv = document.createElement("div");
+        msgDiv.classList.add("msg", isMine ? "mine" : "other");
+        msgDiv.textContent = (isMine ? "You: " : "User " + message.senderId + ": ") + message.content;
+        messagesDiv.appendChild(msgDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+</script>
+</body>
+</html>

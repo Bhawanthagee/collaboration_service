@@ -14,14 +14,14 @@ public class ChatController {
     public ChatController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
-    // Receives messages from /app/private-message
     @MessageMapping("/private-message")
     public void sendPrivateMessage(@Payload ChatMessage message) {
-        // Send message to a specific user’s queue
+
         messagingTemplate.convertAndSendToUser(
-                String.valueOf(message.getReceiverId()), // <-- Integer
+                String.valueOf(message.getReceiverId()),
                 "/private",
                 message
         );
     }
+
 }

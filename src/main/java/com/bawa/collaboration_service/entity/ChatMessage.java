@@ -12,6 +12,6 @@ import java.sql.Timestamp;
 public class ChatMessage {
     private Integer senderId;
     private Integer receiverId;
-    private String message;
+    private String content;
     private Timestamp timestamp;
 }
