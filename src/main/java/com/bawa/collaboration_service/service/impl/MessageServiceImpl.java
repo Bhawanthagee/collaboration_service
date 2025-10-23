@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Slf4j
@@ -32,5 +33,10 @@ public class MessageServiceImpl implements MessageService {
 
         log.info("message:{}",message.toString());
 
+    }
+
+    @Override
+    public List<Message> getMessagesByIds(Integer mentorId, Integer menteeId) {
+        return messageRepository.getMessagesForMentor(mentorId,menteeId);
     }
 }
